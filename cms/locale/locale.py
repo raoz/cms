@@ -282,7 +282,7 @@ class Translation(object):
             return self.mimetype_translation.ugettext(mimetype)
 
 
-DEFAULT_TRANSLATION = Translation("en")
+DEFAULT_TRANSLATION = Translation("et")
 
 
 def get_translations():

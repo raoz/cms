@@ -25,6 +25,7 @@ from future.builtins import *  # noqa
 from six import itervalues, iteritems
 
 from .italy_yaml import YamlLoader
+from .estonia_yaml import EstYamlLoader
 from .polygon import PolygonTaskLoader, PolygonUserLoader, PolygonContestLoader
 from .tps import TpsTaskLoader
 
