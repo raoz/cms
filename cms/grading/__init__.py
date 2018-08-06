@@ -37,7 +37,7 @@ from collections import namedtuple
 
 from sqlalchemy.orm import joinedload
 
-from cms import SCORE_MODE_MAX
+from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST
 from cms.db import Submission
 from cms.locale import DEFAULT_TRANSLATION
 
@@ -171,8 +171,8 @@ def task_score(participation, task):
         compute the score.
     task (Task): the task for which to compute the score.
 
-    return ((float, bool)): the score of user on task, and True if the
-        score could change because of a submission yet to score.
+    return ((float, bool)): the score of user on task, and True if not
+        all submissions of the participation in the task have been scored.
 
     """
     # As this function is primarily used when generating a rankings table
@@ -183,21 +183,18 @@ def task_score(participation, task):
     # submission_results table.  Doing so means that this function should incur
     # no exta database queries.
 
-    # If the score could change due to submission still being compiled
-    # / evaluated / scored.
+    # If some submission is yet to be scored.
     partial = False
 
     submissions = [s for s in participation.submissions
                    if s.task is task and s.official]
     submissions.sort(key=lambda s: s.timestamp)
 
-    if submissions == []:
+    if len(submissions) == 0:
         return 0.0, False
 
-    score = 0.0
-
     if task.score_mode == SCORE_MODE_MAX:
-        # Like in IOI 2013-: maximum score amongst all submissions.
+        # Like in IOI 2013-2016: maximum score amongst all submissions.
 
         # The maximum score amongst all submissions (not yet computed
         # scores count as 0.0).
@@ -211,7 +208,8 @@ def task_score(participation, task):
                 partial = True
 
         score = max_score
-    else:
+
+    elif task.score_mode == SCORE_MODE_MAX_TOKENED_LAST:
         # Like in IOI 2010-2012: maximum score among all tokened
         # submissions and the last submission.
 
@@ -229,17 +227,18 @@ def task_score(participation, task):
 
         if last_sr is not None and last_sr.scored():
             last_score = last_sr.score
-        else:
-            partial = True
 
         for s in submissions:
             sr = s.get_result(task.active_dataset)
-            if s.tokened():
-                if sr is not None and sr.scored():
+            if sr is not None and sr.scored():
+                if s.tokened():
                     max_tokened_score = max(max_tokened_score, sr.score)
-                else:
-                    partial = True
+            else:
+                partial = True
 
         score = max(last_score, max_tokened_score)
+
+    else:
+        raise ValueError("Unknown score mode '%s'" % task.score_mode)
 
     return score, partial
