@@ -32,7 +32,7 @@ from .tps import TpsTaskLoader
 
 LOADERS = dict(
     (loader_class.short_name, loader_class) for loader_class in [
-        YamlLoader,
+        YamlLoader, EstYamlLoader,
         PolygonTaskLoader, PolygonUserLoader, PolygonContestLoader,
         TpsTaskLoader
     ]

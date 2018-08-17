@@ -143,7 +143,7 @@ class Task(Base):
     # during the whole contest (on this tasks).
     token_max_number = Column(
         Integer,
-        CheckConstraint("token_max_number > 0"),
+        CheckConstraint("token_max_number > -1"),
         nullable=True)
 
     # The minimum interval between two successive uses of tokens for
@@ -174,7 +174,7 @@ class Task(Base):
         default=timedelta(minutes=30))
     token_gen_max = Column(
         Integer,
-        CheckConstraint("token_gen_max > 0"),
+        CheckConstraint("token_gen_max > -1"),
         nullable=True)
 
     # Maximum number of submissions or user_tests allowed for each user
@@ -390,6 +390,11 @@ class Dataset(Base):
         Float,
         CheckConstraint("time_limit > 0"),
         nullable=True)
+
+    time_limit_python = Column(
+            Float,
+            nullable=True)
+
     memory_limit = Column(
         BigInteger,
         CheckConstraint("memory_limit > 0"),

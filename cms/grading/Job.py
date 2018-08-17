@@ -474,6 +474,7 @@ class EvaluationJob(Job):
                      files, managers, executables)
         self.input = input
         self.output = output
+        #TODO: python time limit
         self.time_limit = time_limit
         self.memory_limit = memory_limit
         self.outcome = outcome

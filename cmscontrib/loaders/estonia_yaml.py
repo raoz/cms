@@ -1,11 +1,15 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2014-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2015 Luca Chiodini <luca@chiodini.org>
+# Copyright © 2016 Andrea Cracco <guilucand@gmail.com>
+# Copyright © 2018 Edoardo Morassutto <edoardo.morassutto@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,25 +25,32 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import io
 import logging
 import os
 import os.path
 import sys
-import glob
 import yaml
 from datetime import timedelta
 
-from cms.grading.languagemanager import LANGUAGES, LANGUAGE_TO_HEADER_EXT_MAP
+from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST
+from cms.db import Contest, User, Task, Statement, Attachment, Team, Dataset, \
+    Manager, Testcase
+from cms.grading.languagemanager import LANGUAGES, HEADER_EXTS
+from cmscommon.crypto import build_password
 from cmscommon.datetime import make_datetime
-from cms.db import Contest, User, Task, Statement, Attachment, \
-    SubmissionFormatElement, Dataset, Manager, Testcase
-from .base_loader import Loader
 from cmscontrib import touch
 
+
+import glob
+
+from .base_loader import ContestLoader, TaskLoader, UserLoader, TeamLoader
 
 logger = logging.getLogger(__name__)
 
@@ -108,46 +119,51 @@ def make_timedelta(t):
     return timedelta(seconds=t)
 
 
-class EstYamlLoader(Loader):
-    """Load a contest stored using Estonian version of the Italian IOI format.
+class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
+    """Load a contest, task, user or team stored using the Italian IOI format.
 
-    Given the filesystem location of a contest saved in the Italian IOI
-    format, parse those files and directories to produce data that can
-    be consumed by CMS, i.e. a hierarchical collection of instances of
-    the DB classes, headed by a Contest object, and completed with all
-    needed (and available) child objects.
+    Given the filesystem location of a contest, task, user or team, stored
+    using the Italian IOI format, parse those files and directories to produce
+    data that can be consumed by CMS, i.e. the corresponding instances of the
+    DB classes.
 
     """
 
     short_name = 'estonia_yaml'
-    description = 'Estonain version of the Italian YAML-based format'
+    description = 'Estonian YAML-based format based on the Italian YAML-based format'
 
-    @classmethod
-    def detect(cls, path):
-        """See docstring in class Loader.
-
-        """
+    @staticmethod
+    def detect(path):
+        """See docstring in class Loader."""
         # TODO - Not really refined...
-        return os.path.exists(os.path.join(path, "contest.yaml"))
+        return os.path.exists(os.path.join(path, "contest.yaml")) or \
+            os.path.exists(os.path.join(path, "task.yaml")) or \
+            os.path.exists(os.path.join(os.path.dirname(path), "contest.yaml"))
+
+    def get_task_loader(self, taskname):
+        return EstYamlLoader(os.path.join(self.path, taskname), self.file_cacher)
 
     def get_contest(self):
-        """See docstring in class Loader.
+        """See docstring in class ContestLoader."""
+        if not os.path.exists(os.path.join(self.path, "contest.yaml")):
+            logger.critical("File missing: \"contest.yaml\"")
+            return None
 
-        """
-
-        name = os.path.split(self.path)[1]
         conf = yaml.safe_load(
             io.open(os.path.join(self.path, "contest.yaml"),
                     "rt", encoding="utf-8"))
 
-        logger.info("Loading parameters for contest %s." % name)
+        # Here we update the time of the last import
+        touch(os.path.join(self.path, ".itime_contest"))
+        # If this file is not deleted, then the import failed
+        touch(os.path.join(self.path, ".import_error_contest"))
 
         args = {}
 
         load(conf, args, ["name", "nome_breve"])
         load(conf, args, ["description", "nome"])
 
-        assert name == args["name"]
+        logger.info("Loading parameters for contest %s.", args["name"])
 
         # Use the new token settings format if detected.
         if "token_mode" in conf:
@@ -199,106 +215,47 @@ class EstYamlLoader(Loader):
         load(conf, args, "min_submission_interval", conv=make_timedelta)
         load(conf, args, "min_user_test_interval", conv=make_timedelta)
 
+        tasks = load(conf, None, ["tasks", "problemi"])
+        participations = load(conf, None, ["users", "utenti"])
+        for p in participations:
+            p["password"] = build_password(p["password"])
+
+        # Import was successful
+        os.remove(os.path.join(self.path, ".import_error_contest"))
+
         logger.info("Contest parameters loaded.")
 
-        tasks = load(conf, None, ["tasks", "problemi"])
-        self.tasks_order = dict((name, num)
-                                for num, name in enumerate(tasks))
-        self.users_conf = dict((user['username'], user)
-                               for user
-                               in load(conf, None, ["users", "utenti"]))
-        users = self.users_conf.keys()
+        return Contest(**args), tasks, participations
 
-        return Contest(**args), tasks, users
+    def get_user(self):
+        """See docstring in class UserLoader."""
 
-    def has_changed(self, name):
-        """See docstring in class Loader
+        if not os.path.exists(os.path.join(os.path.dirname(self.path),
+                                           "contest.yaml")):
+            logger.critical("File missing: \"contest.yaml\"")
+            return None
 
-        """
-        path = os.path.realpath(os.path.join(self.path, name))
+        username = os.path.basename(self.path)
+        logger.info("Loading parameters for user %s.", username)
 
-        try:
-            conf = yaml.safe_load(
-                io.open(os.path.join(path, "task.yaml"),
-                        "rt", encoding="utf-8"))
-        except IOError:
-            conf = yaml.safe_load(
-                io.open(os.path.join(self.path, name + ".yaml"),
-                        "rt", encoding="utf-8"))
-
-        # If there is no .itime file, we assume that the task has changed
-        if not os.path.exists(os.path.join(path, ".itime")):
-            return True
-
-        getmtime = lambda fname: os.stat(fname).st_mtime
-
-        itime = getmtime(os.path.join(path, ".itime"))
-
-        # Generate a task's list of files
-        # Testcases
-        files = []
-        for filename in os.listdir(os.path.join(path, "input")):
-            files.append(os.path.join(path, "input", filename))
-
-        for filename in os.listdir(os.path.join(path, "output")):
-            files.append(os.path.join(path, "output", filename))
-
-        # Attachments
-        if os.path.exists(os.path.join(path, "att")):
-            for filename in os.listdir(os.path.join(path, "att")):
-                files.append(os.path.join(path, "att", filename))
-
-        # Score file
-        files.append(os.path.join(path, "gen", "GEN"))
-
-        # Statement
-        files.append(os.path.join(path, "statement", "statement.pdf"))
-        files.append(os.path.join(path, "testo", "testo.pdf"))
-
-        # Managers
-        files.append(os.path.join(path, "check", "checker"))
-        files.append(os.path.join(path, "cor", "correttore"))
-        files.append(os.path.join(path, "check", "manager"))
-        files.append(os.path.join(path, "cor", "manager"))
-        if not conf.get('output_only', False) and \
-                os.path.isdir(os.path.join(path, "sol")):
-            for lang in LANGUAGES:
-                files.append(os.path.join(path, "sol", "grader.%s" % lang))
-            for other_filename in os.listdir(os.path.join(path, "sol")):
-                if any(other_filename.endswith(header)
-                       for header in LANGUAGE_TO_HEADER_EXT_MAP.itervalues()):
-                    files.append(os.path.join(path, "sol", other_filename))
-
-        # Yaml
-        files.append(os.path.join(path, "task.yaml"))
-        files.append(os.path.join(self.path, name + ".yaml"))
-
-        # Check is any of the files have changed
-        for fname in files:
-            if os.path.exists(fname):
-                if getmtime(fname) > itime:
-                    return True
-
-        if os.path.exists(os.path.join(path, ".import_error")):
-            logger.warning("Last attempt to import task %s failed,"
-                           " I'm not trying again." % name)
-        return False
-
-    def get_user(self, username):
-        """See docstring in class Loader.
-
-        """
-        logger.info("Loading parameters for user %s." % username)
-        conf = self.users_conf[username]
-        assert username == conf['username']
+        conf = yaml.safe_load(
+            io.open(os.path.join(os.path.dirname(self.path), "contest.yaml"),
+                    "rt", encoding="utf-8"))
 
         args = {}
 
-        load(conf, args, "username")
+        conf = load(conf, None, ["users", "utenti"])
 
-        load(conf, args, "password")
-        load(conf, args, "ip")
-        load(conf, args, "division")
+        for user in conf:
+            if user["username"] == username:
+                conf = user
+                break
+        else:
+            logger.critical("The specified user cannot be found.")
+            return None
+
+        load(conf, args, "username")
+        load(conf, args, "password", conv=build_password)
 
         load(conf, args, ["first_name", "nome"])
         load(conf, args, ["last_name", "cognome"])
@@ -308,79 +265,126 @@ class EstYamlLoader(Loader):
         if "last_name" not in args:
             args["last_name"] = args["username"]
 
-        load(conf, args, ["hidden", "fake"],
-             conv=lambda a: a is True or a == "True")
-
         logger.info("User parameters loaded.")
 
         return User(**args)
 
-    def get_task(self, name):
-        """See docstring in class Loader.
+    def get_team(self):
+        """See docstring in class TeamLoader."""
 
-        """
-        try:
-            num = self.tasks_order[name]
+        if not os.path.exists(os.path.join(os.path.dirname(self.path),
+                                           "contest.yaml")):
+            logger.critical("File missing: \"contest.yaml\"")
+            return None
 
-        # Here we expose an undocumented behavior, so that cmsMake can
-        # import a task even without the whole contest; this is not to
-        # be relied upon in general
-        except AttributeError:
-            num = 1
+        team_code = os.path.basename(self.path)
+        logger.info("Loading parameters for team %s.", team_code)
 
-        task_path = os.path.join(self.path, name)
+        conf = yaml.safe_load(
+            io.open(os.path.join(os.path.dirname(self.path), "contest.yaml"),
+                    "rt", encoding="utf-8"))
+
+        args = {}
+
+        conf = load(conf, None, "teams")
+
+        for team in conf:
+            if team["code"] == team_code:
+                conf = team
+                break
+        else:
+            logger.critical("The specified team cannot be found.")
+            return None
+
+        load(conf, args, "code")
+        load(conf, args, "name")
+
+        logger.info("Team parameters loaded.")
+
+        return Team(**args)
+
+    def get_task(self, get_statement=True):
+        """See docstring in class TaskLoader."""
+        name = os.path.split(self.path)[1]
+
+        if (not os.path.exists(os.path.join(self.path, "task.yaml"))) and \
+           (not os.path.exists(os.path.join(self.path, "..", name + ".yaml"))):
+            logger.critical("File missing: \"task.yaml\"")
+            return None
 
         # We first look for the yaml file inside the task folder,
         # and eventually fallback to a yaml file in its parent folder.
         try:
             conf = yaml.safe_load(
-                io.open(os.path.join(task_path, "task.yaml"),
+                io.open(os.path.join(self.path, "task.yaml"),
                         "rt", encoding="utf-8"))
-        except IOError:
-            conf = yaml.safe_load(
-                io.open(os.path.join(self.path, name + ".yaml"),
-                        "rt", encoding="utf-8"))
+        except IOError as err:
+            try:
+                deprecated_path = os.path.join(self.path, "..", name + ".yaml")
+                conf = yaml.safe_load(io.open(deprecated_path, "rt",
+                                              encoding="utf-8"))
 
-        logger.info("Loading parameters for task %s." % name)
+                logger.warning("You're using a deprecated location for the "
+                               "task.yaml file. You're advised to move %s to "
+                               "%s.", deprecated_path,
+                               os.path.join(self.path, "task.yaml"))
+            except IOError:
+                # Since both task.yaml and the (deprecated) "../taskname.yaml"
+                # are missing, we will only warn the user that task.yaml is
+                # missing (to avoid encouraging the use of the deprecated one)
+                raise err
 
         # Here we update the time of the last import
-        touch(os.path.join(task_path, ".itime"))
+        touch(os.path.join(self.path, ".itime"))
         # If this file is not deleted, then the import failed
-        touch(os.path.join(task_path, ".import_error"))
+        touch(os.path.join(self.path, ".import_error"))
 
         args = {}
 
-        args["num"] = num
         load(conf, args, ["name", "nome_breve"])
         load(conf, args, ["title", "nome"])
-        load(conf, args, "divisions")
 
-        assert name == args["name"]
+        if name != args["name"]:
+            logger.info("The task name (%s) and the directory name (%s) are "
+                        "different. The former will be used.", args["name"],
+                        name)
 
         if args["name"] == args["title"]:
             logger.warning("Short name equals long name (title). "
                            "Please check.")
 
-        primary_language = load(conf, None, "primary_language")
-        if primary_language is None:
-            primary_language = 'et'
+        name = args["name"]
 
-        statement_paths = glob.glob("%s/statement/statement.*.pdf" % task_path)
-        languages = []
-        statements = []
-        if len(statement_paths) == 0:
-            logger.warning("No statements found!")
-        for s in statement_paths:
-            lang = s.split('.')[-2]
-            languages.append(lang)
-            digest = self.file_cacher.put_file_from_path(s, "Statement for task %s (lang: %s)" % (name, lang))
-            statements.append(Statement(lang, digest))
-            logger.info("Loaded statement for language %s" % lang)
-        args["statements"] = statements
-        args["primary_statements"] = "[" + ','.join(['"%s"' % lang for lang in languages]) + "]"
-        args["attachments"] = []  # FIXME Use auxiliary
-        args["submission_format"] = [
-            SubmissionFormatElement("%s.%%l" % name)]
+        logger.info("Loading parameters for task %s.", name)
+
+        if get_statement:
+            primary_language = load(conf, None, "primary_language")
+            if primary_language is None:
+                primary_language = 'et'
+            statement_paths = glob.glob("%s/statement/statement.*.pdf" % (self.path))
+            languages = []
+            statements = {}
+
+            if len(statement_paths) == 0:
+                logger.warning("No statements found!")
+            for s in statement_paths:
+                lang = s.split(".")[-2]
+                languages.append(lang)
+                digest = self.file_cacher.put_file_from_path(s, "Statement for task %s(lang %s)" % (name, lang))
+                statements[lang] = (Statement(lang, digest))
+                logger.info("Loaded statement for language %s" % lang)
+                args
+
+            args["statements"] = statements
+            args["primary_statements"] = [primary_language]
+            args["attachments"] = []  # FIXME Use auxiliary
+
+        args["submission_format"] = ["%s.%%l" % name]
+
+        if conf.get("score_mode", None) == SCORE_MODE_MAX:
+            args["score_mode"] = SCORE_MODE_MAX
+        elif conf.get("score_mode", None) == SCORE_MODE_MAX_TOKENED_LAST:
+            args["score_mode"] = SCORE_MODE_MAX_TOKENED_LAST
 
         # Use the new token settings format if detected.
         if "token_mode" in conf:
@@ -394,9 +398,8 @@ class EstYamlLoader(Loader):
         # Otherwise fall back on the old one.
         else:
             logger.warning(
-                "%s.yaml uses a deprecated format for token settings which "
-                "will soon stop being supported, you're advised to update it.",
-                name)
+                "task.yaml uses a deprecated format for token settings which "
+                "will soon stop being supported, you're advised to update it.")
             # Determine the mode.
             if conf.get("token_initial", None) is None:
                 args["token_mode"] = "disabled"
@@ -429,13 +432,13 @@ class EstYamlLoader(Loader):
         load(conf, args, "min_user_test_interval", conv=make_timedelta)
 
         # Attachments
-        args["attachments"] = []
-        if os.path.exists(os.path.join(task_path, "att")):
-            for filename in os.listdir(os.path.join(task_path, "att")):
+        args["attachments"] = dict()
+        if os.path.exists(os.path.join(self.path, "att")):
+            for filename in os.listdir(os.path.join(self.path, "att")):
                 digest = self.file_cacher.put_file_from_path(
-                    os.path.join(task_path, "att", filename),
+                    os.path.join(self.path, "att", filename),
                     "Attachment %s for task %s" % (filename, name))
-                args["attachments"] += [Attachment(filename, digest)]
+                args["attachments"][filename] = Attachment(filename, digest)
 
         task = Task(**args)
 
@@ -445,9 +448,10 @@ class EstYamlLoader(Loader):
         args["autojudge"] = False
 
         load(conf, args, ["time_limit", "timeout"], conv=float)
-        load(conf, args, "time_limit_python", conv=float)
+        load(conf, args, ["time_limit_python"], conv=float)
         load(conf, args, ["memory_limit", "memlimit"])
         load(conf, args, "score_type")
+
 
         # Builds the parameters that depend on the task type
         args["managers"] = []
@@ -460,29 +464,31 @@ class EstYamlLoader(Loader):
         graders = False
         for lang in LANGUAGES:
             if os.path.exists(os.path.join(
-                    task_path, "sol", "grader.%s" % lang)):
+                    self.path, "sol", "grader%s" % lang.source_extension)):
                 graders = True
                 break
         if graders:
             # Read grader for each language
             for lang in LANGUAGES:
+                extension = lang.source_extension
                 grader_filename = os.path.join(
-                    task_path, "sol", "grader.%s" % lang)
+                    self.path, "sol", "grader%s" % extension)
                 if os.path.exists(grader_filename):
                     digest = self.file_cacher.put_file_from_path(
                         grader_filename,
-                        "Grader for task %s and language %s" % (name, lang))
+                        "Grader for task %s and language %s" %
+                        (task.name, lang))
                     args["managers"] += [
-                        Manager("grader.%s" % lang, digest)]
+                        Manager("grader%s" % extension, digest)]
                 else:
-                    logger.warning("Grader for language %s not found " % lang)
+                    logger.warning("Grader for language %s not found ", lang)
             # Read managers with other known file extensions
-            for other_filename in os.listdir(os.path.join(task_path, "sol")):
+            for other_filename in os.listdir(os.path.join(self.path, "sol")):
                 if any(other_filename.endswith(header)
-                       for header in LANGUAGE_TO_HEADER_EXT_MAP.itervalues()):
+                       for header in HEADER_EXTS):
                     digest = self.file_cacher.put_file_from_path(
-                        os.path.join(task_path, "sol", other_filename),
-                        "Manager %s for task %s" % (other_filename, name))
+                        os.path.join(self.path, "sol", other_filename),
+                        "Manager %s for task %s" % (other_filename, task.name))
                     args["managers"] += [
                         Manager(other_filename, digest)]
             compilation_param = "grader"
@@ -492,13 +498,13 @@ class EstYamlLoader(Loader):
         # If there is check/checker (or equivalent), then, presuming
         # that the task type is Batch or OutputOnly, we retrieve the
         # comparator
-        paths = [os.path.join(task_path, "check", "checker"),
-                 os.path.join(task_path, "cor", "correttore")]
+        paths = [os.path.join(self.path, "check", "checker"),
+                 os.path.join(self.path, "cor", "correttore")]
         for path in paths:
             if os.path.exists(path):
                 digest = self.file_cacher.put_file_from_path(
                     path,
-                    "Manager for task %s" % name)
+                    "Manager for task %s" % task.name)
                 args["managers"] += [
                     Manager("checker", digest)]
                 evaluation_param = "comparator"
@@ -507,7 +513,7 @@ class EstYamlLoader(Loader):
             evaluation_param = "diff"
 
         # Detect subtasks by checking GEN
-        gen_filename = os.path.join(task_path, 'gen', 'GEN')
+        gen_filename = os.path.join(self.path, 'gen', 'GEN')
         try:
             with io.open(gen_filename, "rt", encoding="utf-8") as gen_file:
                 subtasks = []
@@ -527,9 +533,9 @@ class EstYamlLoader(Loader):
                         testcase, comment = splitted
                         testcase = testcase.strip()
                         comment = comment.strip()
-                        testcase_detected = testcase != ''
+                        testcase_detected = len(testcase) > 0
                         copy_testcase_detected = comment.startswith("COPY:")
-                        subtask_detected = comment.startswith('ST:') or comment.startswith('ST-COMPULSORY:')
+                        subtask_detected = comment.startswith('ST:')
 
                         flags = [testcase_detected,
                                  copy_testcase_detected,
@@ -550,14 +556,10 @@ class EstYamlLoader(Loader):
                             if points is None:
                                 assert(testcases == 0)
                             else:
-                                if subtask_compulsory:
-                                    subtasks.append([points, testcases, 1])
-                                else:
-                                    subtasks.append([points, testcases])
+                                subtasks.append([points, testcases])
                             # Open the new one
                             testcases = 0
-                            points = float(comment.split(':')[1].strip())
-                            subtask_compulsory = comment.startswith('ST-COMPULSORY:')
+                            points = int(comment[3:].strip())
 
                 # Close last subtask (if no subtasks were defined, just
                 # fallback to Sum)
@@ -568,16 +570,14 @@ class EstYamlLoader(Loader):
                     n_input = testcases
                     if n_input != 0:
                         input_value = total_value / n_input
-                    args["score_type_parameters"] = "%s" % input_value
+                    args["score_type_parameters"] = input_value
                 else:
-                    if subtask_compulsory:
-                        subtasks.append([points, testcases, 1])
-                    else:
-                        subtasks.append([points, testcases])
+                    subtasks.append([points, testcases])
                     #assert(100 == sum([int(st[0]) for st in subtasks]))
                     n_input = sum([int(st[1]) for st in subtasks])
                     assert args["score_type"] in ["GroupMin", "GroupMul", "GroupSum", "GroupSumConditional", "GroupSumAtLeastTwo"]
-                    args["score_type_parameters"] = "%s" % subtasks
+
+                    args["score_type_parameters"] = subtasks
 
                 if "n_input" in conf:
                     assert int(conf['n_input']) == n_input
@@ -590,100 +590,229 @@ class EstYamlLoader(Loader):
             n_input = int(conf['n_input'])
             if n_input != 0:
                 input_value = total_value / n_input
-            args["score_type_parameters"] = "%s" % input_value
+            args["score_type_parameters"] = input_value
 
         # If output_only is set, then the task type is OutputOnly
         if conf.get('output_only', False):
             args["task_type"] = "OutputOnly"
             args["time_limit"] = None
             args["memory_limit"] = None
-            args["task_type_parameters"] = '["%s"]' % evaluation_param
-            task.submission_format = [
-                SubmissionFormatElement("output_%03d.txt" % i)
-                for i in xrange(n_input)]
+            args["task_type_parameters"] = [evaluation_param]
+            task.submission_format = \
+                ["output_%03d.txt" % i for i in range(n_input)]
 
         # If there is check/manager (or equivalent), then the task
         # type is Communication
         else:
-            paths = [os.path.join(task_path, "check", "manager"),
-                     os.path.join(task_path, "cor", "manager")]
+            paths = [os.path.join(self.path, "check", "manager"),
+                     os.path.join(self.path, "cor", "manager")]
             for path in paths:
                 if os.path.exists(path):
+                    num_processes = load(conf, None, "num_processes")
+                    if num_processes is None:
+                        num_processes = 1
+                    logger.info("Task type Communication")
                     args["task_type"] = "Communication"
-                    args["task_type_parameters"] = '[]'
+                    args["task_type_parameters"] = [num_processes]
                     digest = self.file_cacher.put_file_from_path(
                         path,
-                        "Manager for task %s" % name)
+                        "Manager for task %s" % task.name)
                     args["managers"] += [
                         Manager("manager", digest)]
                     for lang in LANGUAGES:
                         stub_name = os.path.join(
-                            task_path, "sol", "stub.%s" % lang)
+                            self.path, "sol", "stub%s" % lang.source_extension)
                         if os.path.exists(stub_name):
                             digest = self.file_cacher.put_file_from_path(
                                 stub_name,
-                                "Stub for task %s and language %s" % (name,
-                                                                      lang))
+                                "Stub for task %s and language %s" % (
+                                    task.name, lang.name))
                             args["managers"] += [
-                                Manager("stub.%s" % lang, digest)]
+                                Manager(
+                                    "stub%s" % lang.source_extension, digest)]
                         else:
                             logger.warning("Stub for language %s not "
-                                           "found." % lang)
-                    for other_filename in os.listdir(os.path.join(task_path,
+                                           "found.", lang.name)
+                    for other_filename in os.listdir(os.path.join(self.path,
                                                                   "sol")):
-                        if any(other_filename.endswith(header) for header in
-                               LANGUAGE_TO_HEADER_EXT_MAP.itervalues()):
+                        if any(other_filename.endswith(header)
+                               for header in HEADER_EXTS):
                             digest = self.file_cacher.put_file_from_path(
-                                os.path.join(task_path, "sol", other_filename),
-                                "Stub %s for task %s" % (other_filename, name))
+                                os.path.join(self.path, "sol", other_filename),
+                                "Stub %s for task %s" % (other_filename,
+                                                         task.name))
                             args["managers"] += [
                                 Manager(other_filename, digest)]
                     break
 
             # Otherwise, the task type is Batch
             else:
-                if conf.get("task_type", None) is None:
-                    args["task_type"] = "Batch"
-                    args["task_type_parameters"] = \
-                        '["%s", ["%s", "%s"], "%s"]' % \
-                        (compilation_param, infile_param, outfile_param,
-                         evaluation_param)
-                else:
-                    load(conf, args, "task_type")
-                    load(conf, args, "task_type_parameters")
-                    assert "task_type_parameters" in args, "When providing task_type, you must also provide task_type_parameters"
+                args["task_type"] = "Batch"
+                args["task_type_parameters"] = \
+                    [compilation_param, [infile_param, outfile_param],
+                     evaluation_param]
 
         args["testcases"] = []
-        for i in xrange(n_input):
+        for i in range(n_input):
             input_digest = self.file_cacher.put_file_from_path(
-                os.path.join(task_path, "input", "input%d.txt" % i),
-                "Input %d for task %s" % (i, name))
+                os.path.join(self.path, "input", "input%d.txt" % i),
+                "Input %d for task %s" % (i, task.name))
             output_digest = self.file_cacher.put_file_from_path(
-                os.path.join(task_path, "output", "output%d.txt" % i),
-                "Output %d for task %s" % (i, name))
+                os.path.join(self.path, "output", "output%d.txt" % i),
+                "Output %d for task %s" % (i, task.name))
             args["testcases"] += [
                 Testcase("%03d" % i, False, input_digest, output_digest)]
             if args["task_type"] == "OutputOnly":
-                task.attachments += [
-                    Attachment("input_%03d.txt" % i, input_digest)]
+                task.attachments.set(
+                    Attachment("input_%03d.txt" % i, input_digest))
         public_testcases = load(conf, None, ["public_testcases", "risultati"],
                                 conv=lambda x: "" if x is None else x)
-        if public_testcases != "":
+        if public_testcases == "all":
+            for t in args["testcases"]:
+                t.public = True
+        elif len(public_testcases) > 0:
             for x in public_testcases.split(","):
-                # allow usage of inclusive ranges!
-                if ".." in x:
-                    frm, to = map(int, x.strip().split(".."))
-                else:
-                    frm = to = int(x.strip())
-                for i in range(frm, to+1):
-                    args["testcases"][i].public = True
+		if ".." in x:
+			frm, to = map(int, x.strip().split(".."))
+		else:
+			frm = to = int(x.strip())
+		for i in range(frm, to+1):
+		    args["testcases"][i].public = True
+        args["testcases"] = dict((tc.codename, tc) for tc in args["testcases"])
+        args["managers"] = dict((mg.filename, mg) for mg in args["managers"])
 
         dataset = Dataset(**args)
         task.active_dataset = dataset
 
         # Import was successful
-        os.remove(os.path.join(task_path, ".import_error"))
+        os.remove(os.path.join(self.path, ".import_error"))
 
         logger.info("Task parameters loaded.")
 
         return task
+
+    def contest_has_changed(self):
+        """See docstring in class ContestLoader."""
+        name = os.path.split(self.path)[1]
+        contest_yaml = os.path.join(self.path, "contest.yaml")
+
+        if not os.path.exists(contest_yaml):
+            logger.critical("File missing: \"contest.yaml\"")
+            sys.exit(1)
+
+        # If there is no .itime file, we assume that the contest has changed
+        if not os.path.exists(os.path.join(self.path, ".itime_contest")):
+            return True
+
+        getmtime = lambda fname: os.stat(fname).st_mtime
+
+        itime = getmtime(os.path.join(self.path, ".itime_contest"))
+
+        # Check if contest.yaml has changed
+        if getmtime(contest_yaml) > itime:
+            return True
+
+        if os.path.exists(os.path.join(self.path, ".import_error_contest")):
+            logger.warning("Last attempt to import contest %s failed, I'm not "
+                           "trying again. After fixing the error, delete the "
+                           "file .import_error_contest", name)
+            sys.exit(1)
+
+        return False
+
+    def user_has_changed(self):
+        """See docstring in class UserLoader."""
+        # This works as users are kept inside contest.yaml, so changing
+        # them alters the last modified time of contest.yaml.
+        # TODO Improve this.
+        return self.contest_has_changed()
+
+    def team_has_changed(self):
+        """See docstring in class TeamLoader."""
+        # This works as teams are kept inside contest.yaml, so changing
+        # them alters the last modified time of contest.yaml.
+        # TODO Improve this.
+        return self.contest_has_changed()
+
+    def task_has_changed(self):
+        """See docstring in class TaskLoader."""
+        name = os.path.split(self.path)[1]
+
+        if (not os.path.exists(os.path.join(self.path, "task.yaml"))) and \
+           (not os.path.exists(os.path.join(self.path, "..", name + ".yaml"))):
+            logger.critical("File missing: \"task.yaml\"")
+            sys.exit(1)
+
+        # We first look for the yaml file inside the task folder,
+        # and eventually fallback to a yaml file in its parent folder.
+        try:
+            conf = yaml.safe_load(
+                io.open(os.path.join(self.path, "task.yaml"),
+                        "rt", encoding="utf-8"))
+        except IOError:
+            conf = yaml.safe_load(
+                io.open(os.path.join(self.path, "..", name + ".yaml"),
+                        "rt", encoding="utf-8"))
+
+        # If there is no .itime file, we assume that the task has changed
+        if not os.path.exists(os.path.join(self.path, ".itime")):
+            return True
+
+        getmtime = lambda fname: os.stat(fname).st_mtime
+
+        itime = getmtime(os.path.join(self.path, ".itime"))
+
+        # Generate a task's list of files
+        # Testcases
+        files = []
+        for filename in os.listdir(os.path.join(self.path, "input")):
+            files.append(os.path.join(self.path, "input", filename))
+
+        for filename in os.listdir(os.path.join(self.path, "output")):
+            files.append(os.path.join(self.path, "output", filename))
+
+        # Attachments
+        if os.path.exists(os.path.join(self.path, "att")):
+            for filename in os.listdir(os.path.join(self.path, "att")):
+                files.append(os.path.join(self.path, "att", filename))
+
+        # Score file
+        files.append(os.path.join(self.path, "gen", "GEN"))
+
+        # Statement
+        files.append(os.path.join(self.path, "statement", "statement.pdf"))
+        files.append(os.path.join(self.path, "testo", "testo.pdf"))
+
+        # Managers
+        files.append(os.path.join(self.path, "check", "checker"))
+        files.append(os.path.join(self.path, "cor", "correttore"))
+        files.append(os.path.join(self.path, "check", "manager"))
+        files.append(os.path.join(self.path, "cor", "manager"))
+        if not conf.get('output_only', False) and \
+                os.path.isdir(os.path.join(self.path, "sol")):
+            for lang in LANGUAGES:
+                files.append(os.path.join(
+                    self.path, "sol", "grader%s" % lang.source_extension))
+            for other_filename in os.listdir(os.path.join(self.path, "sol")):
+                if any(other_filename.endswith(header)
+                       for header in HEADER_EXTS):
+                    files.append(
+                        os.path.join(self.path, "sol", other_filename))
+
+        # Yaml
+        files.append(os.path.join(self.path, "task.yaml"))
+        files.append(os.path.join(self.path, "..", name + ".yaml"))
+
+        # Check is any of the files have changed
+        for fname in files:
+            if os.path.exists(fname):
+                if getmtime(fname) > itime:
+                    return True
+
+        if os.path.exists(os.path.join(self.path, ".import_error")):
+            logger.warning("Last attempt to import task %s failed, I'm not "
+                           "trying again. After fixing the error, delete the "
+                           "file .import_error", name)
+            sys.exit(1)
+
+        return False
