@@ -79,14 +79,24 @@ def create_sandbox(file_cacher, name=None):
     return sandbox
 
 
-def delete_sandbox(sandbox, success=True):
+def delete_sandbox(sandbox, job, success=None):
     """Delete the sandbox, if the configuration and job was ok.
 
     sandbox (Sandbox): the sandbox to delete.
-    success (boolean): if the job succeeded (no system errors).
+    job (Job): the job currently running.
+    success (boolean|job.success): if the job succeeded (no system errors).
 
     """
+    if success is None:
+        success = job.success
+
     sandbox.cleanup()
+
+    # Archive the sandbox if required
+    if job.archive_sandbox:
+        sandbox_digest = sandbox.archive()
+        job.sandbox_digests.append(sandbox_digest)
+
     # If the job was not successful, we keep the sandbox around.
     if not success:
         logger.warning("Sandbox %s kept around because job did not succeeded.",
@@ -262,7 +272,7 @@ def eval_output(file_cacher, job, checker_codename,
             sandbox, checker_digest, job.input, job.output,
             EVAL_USER_OUTPUT_FILENAME)
 
-        delete_sandbox(sandbox, success)
+        delete_sandbox(sandbox, job, success)
         return success, outcome, text
 
     else:
