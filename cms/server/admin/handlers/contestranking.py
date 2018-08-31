@@ -46,11 +46,12 @@ from cms.grading import task_score
 from .base import BaseHandler, require_permission
 
 
-class RankingBaseHandler(BaseHandler):
-    """Provides ranking params for rendering and exporting
+class RankingHandler(BaseHandler):
+    """Shows the ranking for a contest.
 
     """
-    def get_ranking_params(self, contest_id):
+    @require_permission(BaseHandler.AUTHENTICATED)
+    def get(self, contest_id, format="online"):
         # This validates the contest id.
         self.safe_get_item(Contest, contest_id)
 
@@ -69,8 +70,6 @@ class RankingBaseHandler(BaseHandler):
         for p in self.contest.participations:
             show_teams = show_teams or p.team_id
 
-            p.user.name = "%s %s" % (p.user.first_name, p.user.last_name)
-            p.score = {}
             p.scores = []
             total_score = 0.0
             partial = False
@@ -80,49 +79,11 @@ class RankingBaseHandler(BaseHandler):
                 p.scores.append((t_score, t_partial))
                 total_score += t_score
                 partial = partial or t_partial
-                p.score[task.name] = t_score
             total_score = round(total_score, self.contest.score_precision)
             p.total_score = (total_score, partial)
 
-        r_params = self.render_params()
-        r_params["show_teams"] = show_teams
-
-        return r_params
-
-
-class RankingHandler(RankingBaseHandler):
-    """Shows the ranking for a contest.
-
-    """
-    @require_permission(BaseHandler.AUTHENTICATED)
-    def get(self, contest_id, sort_by="total_score", sort_order="desc"):
-        self.r_params = self.get_ranking_params(contest_id)
-        self.r_params["sort_by"] = sort_by
-        self.r_params["sort_reverse"] = sort_order == 'desc'
-        self.r_params["get_sort_attributes"] = self.sort_attributes_generator(sort_by, sort_order)
-        self.render("ranking.html", **self.r_params)
-
-    @staticmethod
-    def sort_attributes_generator(active_sort_by, active_sort_order):
-        def get_sort_attributes(sort_by):
-            if sort_by != active_sort_by:
-                return 'desc', '\u21C5'
-            elif active_sort_order != 'desc':
-                return 'desc', '\u21CA'
-            else:
-                return 'asc', '\u21C8'
-
-        return get_sort_attributes
-
-
-class RankingExportHandler(RankingBaseHandler):
-    """Shows the ranking for a contest.
-
-    """
-    @require_permission(BaseHandler.AUTHENTICATED)
-    def get(self, contest_id, format):
-        self.r_params = self.get_ranking_params(contest_id)
-
+        self.r_params = self.render_params()
+        self.r_params["show_teams"] = show_teams
         if format == "txt":
             self.set_header("Content-Type", "text/plain")
             self.set_header("Content-Disposition",
@@ -146,7 +107,7 @@ class RankingExportHandler(RankingBaseHandler):
             contest = self.r_params["contest"]
 
             row = ["Username", "User"]
-            if self.r_params["show_teams"]:
+            if show_teams:
                 row.append("Team")
             for task in contest.tasks:
                 row.append(task.name)
@@ -166,7 +127,7 @@ class RankingExportHandler(RankingBaseHandler):
 
                 row = [p.user.username,
                        "%s %s" % (p.user.first_name, p.user.last_name)]
-                if self.r_params["show_teams"]:
+                if show_teams:
                     row.append(p.team.name if p.team else "")
                 assert len(contest.tasks) == len(p.scores)
                 for t_score, t_partial in p.scores: # Custom field, see above
@@ -182,6 +143,8 @@ class RankingExportHandler(RankingBaseHandler):
                 if six.PY3:
                     writer.writerow(row)  # untested
                 else:
-                    writer.writerow([str(s).encode("utf-8") for s in row])
+                    writer.writerow([s.encode("utf-8") for s in row])
 
             self.finish(output.getvalue())
+        else:
+            self.render("ranking.html", **self.r_params)

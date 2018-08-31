@@ -63,8 +63,7 @@ from .contestquestion import \
     QuestionReplyHandler, \
     QuestionIgnoreHandler
 from .contestranking import \
-    RankingHandler, \
-    RankingExportHandler
+    RankingHandler
 from .task import \
     AddTaskHandler, \
     TaskHandler, \
@@ -165,9 +164,7 @@ HANDLERS = [
     # Contest's ranking
 
     (r"/contest/([0-9]+)/ranking", RankingHandler),
-    (r"/contest/([0-9]+)/ranking/export/([a-z]+)", RankingExportHandler),
-    (r"/contest/([0-9]+)/ranking/sort/([a-zA-Z0-9_.]+)", RankingHandler),
-    (r"/contest/([0-9]+)/ranking/sort/([a-zA-Z0-9_.]+)/(asc|desc)", RankingHandler),
+    (r"/contest/([0-9]+)/ranking/([a-z]+)", RankingHandler),
 
     # Tasks
 
