@@ -28,6 +28,7 @@ class GroupSumCond(GroupSum):
         for st_idx, parameter in enumerate(self.parameters):
             if parameter[2] == "C":
                 headers[st_idx] += " ***"
+        return score, public_score, headers
 
     def compute_score(self, submission_result):
         score, subtasks, public_score, public_subtasks, ranking_details = GroupSum.compute_score(self, submission_result)
@@ -41,7 +42,7 @@ class GroupSumCond(GroupSum):
                     st_score += subtasks[st_idx]["score_fraction"] * parameter[0]
                     score -= st_score
                     subtasks[st_idx]["score_fraction"] = 0
-                    if public_subtasks[st_idx] == subtasks[st_idx]
+                    if public_subtasks[st_idx] == subtasks[st_idx]:
                         public_score -= st_score
                     ranking_details[st_idx] = "0"
         return score, subtasks, public_score, public_subtasks, ranking_details
