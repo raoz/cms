@@ -194,6 +194,7 @@
             <th>{% trans %}Task{% endtrans %}</th>
             <th>{% trans %}Name{% endtrans %}</th>
             <th>{% trans %}Time limit{% endtrans %}</th>
+            <th>{% trans %}Python time limit{% endtrans %}</th>
             <th>{% trans %}Memory limit{% endtrans %}</th>
             <th>{% trans %}Type{% endtrans %}</th>
             <th>{% trans %}Files{% endtrans %}</th>
@@ -211,6 +212,13 @@
             <td>
     {% if t_iter.active_dataset.time_limit is not none %}
         {{ t_iter.active_dataset.time_limit|format_duration(length="long") }}
+    {% else %}
+        {% trans %}N/A{% endtrans %}
+    {% endif %}
+            </td>
+            <td>
+    {% if t_iter.active_dataset.time_limit_python is not none %}
+        {{ t_iter.active_dataset.time_limit_python|format_duration(length="long") }}
     {% else %}
         {% trans %}N/A{% endtrans %}
     {% endif %}

@@ -268,7 +268,7 @@ class Communication(TaskType):
         #     but in practice is num_processes times that because the
         #     constraint on the total time can only be enforced after all user
         #     programs terminated.
-        manager_time_limit = max(self.num_processes * (job.time_limit + 1.0),
+        manager_time_limit = max(self.num_processes * (job.time_limit_python + 1.0),
                                  config.trusted_sandbox_max_time_s)
         manager = evaluation_step_before_run(
             sandbox_mgr,

@@ -281,6 +281,7 @@ class Batch(TaskType):
             sandbox,
             commands,
             job.time_limit,
+            job.time_limit_python,
             job.memory_limit,
             writable_files=files_allowing_write,
             stdin_redirect=stdin_redirect,

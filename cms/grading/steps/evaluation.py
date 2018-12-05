@@ -92,7 +92,7 @@ EVALUATION_MESSAGES = MessageCollection([
 
 
 def evaluation_step(sandbox, commands,
-                    time_limit=None, memory_limit=None,
+                    time_limit=None, time_limit_python=None, memory_limit=None,
                     allow_dirs=None, writable_files=None,
                     stdin_redirect=None, stdout_redirect=None,
                     multiprocess=False):
@@ -121,12 +121,7 @@ def evaluation_step(sandbox, commands,
         to the standard input of each command; if None, nothing will be
         provided to stdin.
     stdout_redirect (str|None): the name of the file that the standard output
-        of each command will be redirected to; if None, "stdout.txt" will be
-        used.
-    multiprocess (bool): whether to allow multiple thread/processes or not.
-
-    return ((bool, bool|None, dict|None)): a tuple with three items:
-        * success: True if the sandbox did not fail, in any command;
+        of each command;
         * evaluation_success: True if the solution ran correctly and the output
             can be evaluated, False if it terminated with an error or was
             terminated due to resource limitation; None if success is False;
@@ -138,7 +133,7 @@ def evaluation_step(sandbox, commands,
     """
     for command in commands:
         success = evaluation_step_before_run(
-            sandbox, command, time_limit, memory_limit,
+            sandbox, command, time_limit, time_limit_python, memory_limit,
             allow_dirs, writable_files, stdin_redirect, stdout_redirect,
             multiprocess, wait=True)
         if not success:
@@ -153,7 +148,7 @@ def evaluation_step(sandbox, commands,
 
 
 def evaluation_step_before_run(sandbox, command,
-                               time_limit=None, memory_limit=None,
+                               time_limit=None, time_limit_python=None, memory_limit=None,
                                allow_dirs=None, writable_files=None,
                                stdin_redirect=None, stdout_redirect=None,
                                multiprocess=False, wait=False):
@@ -171,6 +166,8 @@ def evaluation_step_before_run(sandbox, command,
     # Ensure parameters are appropriate.
     if time_limit is not None and time_limit <= 0:
         raise ValueError("Time limit must be positive, is %s" % time_limit)
+    if time_limit_python is not None and time_limit_python <= 0:
+        raise ValueError("Python time limit must be positive, is %s" % time_limit_python)
     if memory_limit is not None and memory_limit <= 0:
         raise ValueError(
             "Memory limit must be positive, is %s" % memory_limit)
@@ -185,8 +182,9 @@ def evaluation_step_before_run(sandbox, command,
 
     # Set sandbox parameters suitable for evaluation.
     if time_limit is not None:
-        sandbox.timeout = time_limit
-        sandbox.wallclock_timeout = 2 * time_limit + 1
+        sandbox.timeout = time_limit_python if time_limit_python is not None and len(command) > 1 and  ("python" in command[0] or "php" in command[0]) else time_limit
+        logger.info("Timeout: " + repr(sandbox.timeout))
+        sandbox.wallclock_timeout = 2 * sandbox.timeout + 1
     else:
         sandbox.timeout = None
         sandbox.wallclock_timeout = None

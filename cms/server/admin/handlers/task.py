@@ -180,6 +180,7 @@ class TaskHandler(BaseHandler):
                 attrs = dataset.get_attrs()
 
                 self.get_time_limit(attrs, "time_limit_%d" % dataset.id)
+                self.get_time_limit(attrs, "time_limit_python_%d" % dataset.id, "time_limit_python")
                 self.get_memory_limit(attrs, "memory_limit_%d" % dataset.id)
                 self.get_task_type(attrs, "task_type_%d" % dataset.id,
                                    "TaskTypeOptions_%d_" % dataset.id)

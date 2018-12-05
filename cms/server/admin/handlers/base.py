@@ -397,7 +397,7 @@ class BaseHandler(CommonRequestHandler):
             raise ValueError("Submission format not recognized.")
         dest["submission_format"] = format_
 
-    def get_time_limit(self, dest, field):
+    def get_time_limit(self, dest, field, field_name="time_limit"):
         """Parse the time limit.
 
         Read the argument with the given name and use its value to set
@@ -411,7 +411,7 @@ class BaseHandler(CommonRequestHandler):
         if value is None:
             return
         if len(value) == 0:
-            dest["time_limit"] = None
+            dest[field_name] = None
         else:
             try:
                 value = float(value)
@@ -419,7 +419,7 @@ class BaseHandler(CommonRequestHandler):
                 raise ValueError("Can't cast %s to float." % value)
             if not 0 <= value < float("+inf"):
                 raise ValueError("Time limit out of range.")
-            dest["time_limit"] = value
+            dest[field_name] = value
 
     def get_memory_limit(self, dest, field):
         """Parse the memory limit.
