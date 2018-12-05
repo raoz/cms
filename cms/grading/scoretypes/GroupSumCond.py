@@ -39,7 +39,7 @@ class GroupSumCond(GroupSum):
         if u_score == 0:
             for st_idx, parameter in enumerate(self.parameters):
                 if parameter[2] == "C":
-                    st_score += subtasks[st_idx]["score_fraction"] * parameter[0]
+                    st_score = subtasks[st_idx]["score_fraction"] * parameter[0]
                     score -= st_score
                     subtasks[st_idx]["score_fraction"] = 0
                     if public_subtasks[st_idx] == subtasks[st_idx]:
