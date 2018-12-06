@@ -209,7 +209,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
     N_("N/A")
     TEMPLATE = """\
 {% for st in details %}
-    {% if "score_fraction" in st %}
+    {% if "score_ignore" in st %}
+<div class="subtask ignore">
+    {% elif "score_fraction" in st %}
         {% if st["score_fraction"] >= 1.0 %}
 <div class="subtask correct">
         {% elif st["score_fraction"] <= 0.0 %}
