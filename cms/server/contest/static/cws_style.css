@@ -614,7 +614,7 @@ td.token_rules p:last-child {
     box-shadow: 0 0 2px 2px #D0D0D0 inset;
 }
 
-#submission_detail .subtask.ignored .subtask-head {
+#submission_detail .subtask.ignore .subtask-head {
     color: #707070;
 }
 
@@ -656,7 +656,7 @@ td.token_rules p:last-child {
     background-color: #edd400;
 }
 
-#submission_detail .subtask.ignored .subtask-head .score {
+#submission_detail .subtask.ignore .subtask-head .score {
     background-color: #707070;
 }
 
