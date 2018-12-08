@@ -34,17 +34,18 @@ class GroupSumCond(GroupSum):
 
     def compute_score(self, submission_result):
         score, subtasks, public_score, public_subtasks, ranking_details = GroupSum.compute_score(self, submission_result)
-        u_score = 0
-        for st_idx, parameter in enumerate(self.parameters):
-            if parameter[2] == "U":
-                u_score += subtasks[st_idx]["score_fraction"] * parameter[0]
-        if u_score == 0:
+        if len(subtasks) == len(self.parameters):
+            u_score = 0
             for st_idx, parameter in enumerate(self.parameters):
-                if parameter[2] == "C":
-                    st_score = subtasks[st_idx]["score_fraction"] * parameter[0]
-                    score -= st_score
-                    if public_subtasks[st_idx] == subtasks[st_idx]:
-                        public_score -= st_score
-                    ranking_details[st_idx] = "0"
-                    subtasks[st_idx]["score_ignore"] = True
+                if parameter[2] == "U":
+                    u_score += subtasks[st_idx]["score_fraction"] * parameter[0]
+            if u_score == 0:
+                for st_idx, parameter in enumerate(self.parameters):
+                    if parameter[2] == "C":
+                        st_score = subtasks[st_idx]["score_fraction"] * parameter[0]
+                        score -= st_score
+                        if public_subtasks[st_idx] == subtasks[st_idx]:
+                            public_score -= st_score
+                        ranking_details[st_idx] = "0"
+                        subtasks[st_idx]["score_ignore"] = True
         return score, subtasks, public_score, public_subtasks, ranking_details
