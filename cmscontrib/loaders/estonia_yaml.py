@@ -519,6 +519,7 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                 subtasks = []
                 testcases = 0
                 points = None
+                parameters = []
                 for line in gen_file:
                     line = line.strip()
                     splitted = line.split('#', 1)
@@ -556,10 +557,12 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                             if points is None:
                                 assert(testcases == 0)
                             else:
-                                subtasks.append([points, testcases])
+                                subtasks.append([points, testcases] + parameters)
                             # Open the new one
                             testcases = 0
-                            points = int(comment[3:].strip())
+                            comment = [x.strip() for x in comment[3:].split()]
+                            points = int(comment[0])
+                            parameters = comment[1:]
 
                 # Close last subtask (if no subtasks were defined, just
                 # fallback to Sum)
@@ -572,11 +575,14 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         input_value = total_value / n_input
                     args["score_type_parameters"] = input_value
                 else:
-                    subtasks.append([points, testcases])
+                    subtasks.append([points, testcases] + parameters)
                     #assert(100 == sum([int(st[0]) for st in subtasks]))
                     n_input = sum([int(st[1]) for st in subtasks])
-                    assert args["score_type"] in ["GroupMin", "GroupMul", "GroupSum", "GroupSumConditional", "GroupSumAtLeastTwo"]
-
+                    assert args["score_type"] in ["GroupMin", "GroupMul", "GroupSum", "GroupSumCond"]
+                    if args["score_type"] == "GroupSumCond":
+                        for st in subtasks:
+                            assert len(st) >= 3
+                            assert st[2] in ["E", "U", "C"]
                     args["score_type_parameters"] = subtasks
 
                 if "n_input" in conf:
