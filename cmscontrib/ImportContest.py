@@ -196,7 +196,8 @@ class ContestImporter(object):
 
         """
         task_loader = self.loader.get_task_loader(taskname)
-        task = session.query(Task).filter(Task.name == taskname).first()
+        # HACK to tolerate task names of the form "day/task" in contest.yaml
+        task = session.query(Task).filter(Task.name == taskname.split('/')[-1]).first()
 
         if task is None:
             # Task is not in the DB; if the user asked us to import it, we do
