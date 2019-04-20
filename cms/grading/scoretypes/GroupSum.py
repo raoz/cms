@@ -18,4 +18,4 @@ class GroupSum(GroupMul):
     """
 
     def reduce(self, outcomes, parameter):
-    return float(sum(outcomes))/len(outcomes)
+        return float(sum(outcomes))/len(outcomes)
