@@ -957,7 +957,7 @@ class IsolateSandbox(SandboxBase):
         self.stdout_file = None        # -o
         self.stderr_file = None        # -r
         self.timeout = None            # -t
-        self.verbosity = 1             # -v
+        self.verbosity = 0             # -v
         self.wallclock_timeout = None  # -w
         self.extra_timeout = None      # -x
 
