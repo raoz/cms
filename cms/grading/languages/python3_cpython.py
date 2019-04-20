@@ -28,6 +28,12 @@ from future.builtins import *  # noqa
 
 import os
 
+from six import PY3
+if PY3:
+    from shlex import quote as shell_quote
+else:
+    from pipes import quote as shell_quote
+
 from cms.grading import CompiledLanguage
 
 
