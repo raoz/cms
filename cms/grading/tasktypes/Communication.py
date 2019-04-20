@@ -223,8 +223,8 @@ class Communication(TaskType):
 
         # Create FIFOs.
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
-        fifo_in = [os.path.join(fifo_dir[i], "in%d" % i) for i in indices]
-        fifo_out = [os.path.join(fifo_dir[i], "out%d" % i) for i in indices]
+        fifo_in = [os.path.join(fifo_dir[i], "fifo_in_%d" % i) for i in indices]
+        fifo_out = [os.path.join(fifo_dir[i], "fifo_out_%d" % i) for i in indices]
         for i in indices:
             os.mkfifo(fifo_in[i])
             os.mkfifo(fifo_out[i])
