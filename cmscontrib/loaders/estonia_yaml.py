@@ -678,12 +678,12 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                 t.public = True
         elif len(public_testcases) > 0:
             for x in public_testcases.split(","):
-        if ".." in x:
-            frm, to = map(int, x.strip().split(".."))
-        else:
-            frm = to = int(x.strip())
-        for i in range(frm, to+1):
-            args["testcases"][i].public = True
+                if ".." in x:
+                    frm, to = map(int, x.strip().split(".."))
+                else:
+                    frm = to = int(x.strip())
+                for i in range(frm, to+1):
+                    args["testcases"][i].public = True
         args["testcases"] = dict((tc.codename, tc) for tc in args["testcases"])
         args["managers"] = dict((mg.filename, mg) for mg in args["managers"])
 
