@@ -66,7 +66,7 @@ class Python3CPython(CompiledLanguage):
         for s in source_filenames:
             f = os.path.splitext(os.path.basename(s))[0]
             commands += [["/bin/sh", "-c",
-                          " ".join(["/usr/bin/mv", "__pycache__/" + f + ".*.pyc", f + ".pyc"])]]
+                          " ".join(["/bin/mv", "__pycache__/" + f + ".*.pyc", f + ".pyc"])]]
         commands += [["/bin/sh", "-c",
                      " ".join(["/usr/bin/zip", "-r", "-", "*.pyc", ">",
                                shell_quote(executable_filename)])]]
