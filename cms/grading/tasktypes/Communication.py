@@ -370,9 +370,9 @@ class Communication(TaskType):
         job.text = text
         job.plus = stats_user
 
-        delete_sandbox(sandbox_mgr, job)
-        for s in sandbox_user:
-            delete_sandbox(s, job)
-        if not config.keep_sandbox:
-            for d in fifo_dir:
-                rmtree(d)
+#        delete_sandbox(sandbox_mgr, job)
+#        for s in sandbox_user:
+#            delete_sandbox(s, job)
+#        if not config.keep_sandbox:
+#            for d in fifo_dir:
+#                rmtree(d)
