@@ -28,6 +28,12 @@ from future.builtins import *  # noqa
 
 import os
 
+from six import PY3
+if PY3:
+    from shlex import quote as shell_quote
+else:
+    from pipes import quote as shell_quote
+
 from cms.grading import CompiledLanguage
 
 
@@ -55,14 +61,16 @@ class Python2CPython(CompiledLanguage):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        py_command = ["/usr/bin/python2", "-m", "py_compile",
-                      source_filenames[0]]
-        mv_command = ["/bin/mv", "%s.pyc" % os.path.splitext(os.path.basename(
-                      source_filenames[0]))[0], executable_filename]
-        return [py_command, mv_command]
+        py_command = ["/usr/bin/python2", "-m", "py_compile"] + source_filenames
+        zip_command = ["/bin/sh", "-c",
+                       " ".join(["/usr/bin/zip", "-r", "-", "*.pyc", ">",
+                                 shell_quote(executable_filename)])]
+        return [py_command, zip_command]
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
-        return [["/usr/bin/python2", executable_filename] + args]
+        unzip_command = ["/usr/bin/unzip", executable_filename]
+        py_command = ["/usr/bin/python2", main + ".pyc"] + args
+        return [unzip_command, py_command]

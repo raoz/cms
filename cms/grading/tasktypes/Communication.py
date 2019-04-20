@@ -302,6 +302,8 @@ class Communication(TaskType):
                 job.time_limit,
                 job.memory_limit,
                 allow_dirs=[fifo_dir[i]],
+                stdin_redirect=fifo_in[i],
+                stdout_redirect=fifo_out[i],
                 multiprocess=job.multithreaded_sandbox)
 
         # Wait for the processes to conclude, without blocking them on I/O.

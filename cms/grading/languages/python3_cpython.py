@@ -28,6 +28,12 @@ from future.builtins import *  # noqa
 
 import os
 
+from six import PY3
+if PY3:
+    from shlex import quote as shell_quote
+else:
+    from pipes import quote as shell_quote
+
 from cms.grading import CompiledLanguage
 
 
@@ -55,16 +61,21 @@ class Python3CPython(CompiledLanguage):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        basename = os.path.splitext(os.path.basename(source_filenames[0]))[0]
-        compilation_program = ";".join([
-            "import py_compile as m",
-            "m.compile(%s, %s, doraise=True)" % (
-                repr(basename + ".py"), repr(basename))])
-        py_command = ["/usr/bin/python3", "-c", compilation_program]
-        return [py_command]
+        commands = []
+        commands += [["/usr/bin/python3", "-m", "py_compile"] + source_filenames]
+        for s in source_filenames:
+            f = os.path.splitext(os.path.basename(s))[0]
+            commands += [["/bin/sh", "-c",
+                          " ".join(["/bin/mv", "__pycache__/" + f + ".*.pyc", f + ".pyc"])]]
+        commands += [["/bin/sh", "-c",
+                     " ".join(["/usr/bin/zip", "-r", "-", "*.pyc", ">",
+                               shell_quote(executable_filename)])]]
+        return commands
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
-        return [["/usr/bin/python3", executable_filename] + args]
+        unzip_command = ["/usr/bin/unzip", executable_filename]
+        py_command = ["/usr/bin/python3", main + ".pyc"] + args
+        return [unzip_command, py_command]
