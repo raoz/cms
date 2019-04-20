@@ -114,7 +114,7 @@ class Config(object):
         # Worker.
         self.keep_sandbox = True
         self.use_cgroups = True
-        self.sandbox_implementation = 'isolate'
+        self.sandbox_implementation = 'stupid'
 
         # Sandbox.
         # Max size of each writable file during an evaluation step, in KiB.
