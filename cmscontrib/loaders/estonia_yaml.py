@@ -602,6 +602,7 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         if conf.get('output_only', False):
             args["task_type"] = "OutputOnly"
             args["time_limit"] = None
+            args["time_limit_python"] = None
             args["memory_limit"] = None
             args["task_type_parameters"] = [evaluation_param]
             task.submission_format = \

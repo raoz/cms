@@ -257,8 +257,7 @@ class TwoSteps(TaskType):
         first = evaluation_step_before_run(
             first_sandbox,
             first_command,
-            job.time_limit,
-            job.time_limit_python,
+            job.effective_time_limit(),
             job.memory_limit,
             first_allow_path,
             stdin_redirect=TwoSteps.INPUT_FILENAME,
@@ -282,8 +281,7 @@ class TwoSteps(TaskType):
         second = evaluation_step_before_run(
             second_sandbox,
             second_command,
-            job.time_limit,
-            job.time_limit_python,
+            job.effective_time_limit(),
             job.memory_limit,
             second_allow_path,
             stdout_redirect=TwoSteps.OUTPUT_FILENAME,

@@ -280,8 +280,7 @@ class Batch(TaskType):
         box_success, evaluation_success, stats = evaluation_step(
             sandbox,
             commands,
-            job.time_limit,
-            job.time_limit_python,
+            job.effective_time_limit(),
             job.memory_limit,
             writable_files=files_allowing_write,
             stdin_redirect=stdin_redirect,
