@@ -68,7 +68,7 @@ class Python3CPython(CompiledLanguage):
             commands += [["/bin/sh", "-c",
                           " ".join(["/bin/mv", "__pycache__/" + f + ".*.pyc", f + ".pyc"])]]
         commands += [["/bin/sh", "-c",
-                     " ".join(["/usr/bin/zip", "-r", "-", "*.pyc", ">",
+                     " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.pyc", ">",
                                shell_quote(executable_filename)])]]
         return commands
 

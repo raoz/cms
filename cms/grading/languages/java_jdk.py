@@ -73,13 +73,13 @@ class JavaJDK(Language):
         # a class file for each inner class.
         if JavaJDK.USE_JAR:
             jar_command = ["/bin/sh", "-c",
-                           " ".join(["jar", "cf",
+                           " ".join(["/usr/bin/jar", "cf",
                                      shell_quote(executable_filename),
                                      "*.class"])]
             return [compile_command, jar_command]
         else:
             zip_command = ["/bin/sh", "-c",
-                           " ".join(["zip", "-r", "-", "*.class", ">",
+                           " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.class", ">",
                                      shell_quote(executable_filename)])]
             return [compile_command, zip_command]
 
