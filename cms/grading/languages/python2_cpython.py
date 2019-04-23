@@ -63,7 +63,7 @@ class Python2CPython(CompiledLanguage):
         """See Language.get_compilation_commands."""
         py_command = ["/usr/bin/python2", "-m", "py_compile"] + source_filenames
         zip_command = ["/bin/sh", "-c",
-                       " ".join(["/usr/bin/zip", "-r", "-", "*.pyc", ">",
+                       " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.pyc", ">",
                                  shell_quote(executable_filename)])]
         return [py_command, zip_command]
 
