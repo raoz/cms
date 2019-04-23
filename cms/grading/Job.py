@@ -469,6 +469,8 @@ class EvaluationJob(Job):
         input (string|None): digest of the input file.
         output (string|None): digest of the output file.
         time_limit (float|None): user time limit in seconds.
+        time_limit_python (float|None): user time limit in seconds
+            for Python solutions; if None, time_limit is used.
         memory_limit (int|None): memory limit in bytes.
         outcome (string|None): the outcome of the evaluation, from
             which to compute the score.
@@ -491,7 +493,7 @@ class EvaluationJob(Job):
         self.input = input
         self.output = output
         self.time_limit = time_limit
-        self.time_limit_python = time_limit_python
+        self.time_limit_python = time_limit_python if time_limit_python is not None else time_limit
         self.memory_limit = memory_limit
         self.outcome = outcome
         self.user_output = user_output

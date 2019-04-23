@@ -108,6 +108,8 @@ def evaluation_step(sandbox, commands,
     commands ([[str]]): evaluation commands to execute.
     time_limit (float|None): time limit in seconds (applied to each command);
         if None, no time limit is enforced.
+    time_limit_python (float|None): time limit in seconds for Python; if None,
+        time_limit is used.
     memory_limit (int|None): memory limit in MiB (applied to each command); if
         None, no memory limit is enforced.
     allow_dirs ([str]|None): if not None, a list of external
