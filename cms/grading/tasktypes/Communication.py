@@ -268,14 +268,13 @@ class Communication(TaskType):
         #     but in practice is num_processes times that because the
         #     constraint on the total time can only be enforced after all user
         #     programs terminated.
-        time1 = job.time_limit if job.time_limit is not None else 0.0
-        time2 = job.time_limit_python if job.time_limit_python is not None else 0.0
-        manager_time_limit = max(self.num_processes * (max(time1, time2) + 1.0),
-                                 config.trusted_sandbox_max_time_s)
+        user_time_limit = job.effective_time_limit()
+        manager_time_limit = None if user_time_limit is None else \
+            max(self.num_processes * (user_time_limit + 1.0),
+                config.trusted_sandbox_max_time_s)
         manager = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
-            manager_time_limit,
             manager_time_limit,
             config.trusted_sandbox_max_memory_kib // 1024,
             allow_dirs=fifo_dir,
@@ -302,8 +301,7 @@ class Communication(TaskType):
             processes[i] = evaluation_step_before_run(
                 sandbox_user[i],
                 commands[-1],
-                job.time_limit,
-                job_time_limit_python
+                user_time_limit,
                 job.memory_limit,
                 allow_dirs=[fifo_dir[i]],
                 stdin_redirect=fifo_in[i],
@@ -327,7 +325,7 @@ class Communication(TaskType):
         # sandbox can only check its own; if the sum is greater than the time
         # limit we adjust the result.
         if box_success_user and evaluation_success_user and \
-                stats_user["execution_time"] >= job.time_limit:
+                stats_user["execution_time"] >= user_time_limit:
             evaluation_success_user = False
             stats_user['exit_status'] = Sandbox.EXIT_TIMEOUT
 

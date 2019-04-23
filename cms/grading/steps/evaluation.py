@@ -92,7 +92,7 @@ EVALUATION_MESSAGES = MessageCollection([
 
 
 def evaluation_step(sandbox, commands,
-                    time_limit=None, time_limit_python=None, memory_limit=None,
+                    time_limit=None, memory_limit=None,
                     allow_dirs=None, writable_files=None,
                     stdin_redirect=None, stdout_redirect=None,
                     multiprocess=False):
@@ -108,8 +108,6 @@ def evaluation_step(sandbox, commands,
     commands ([[str]]): evaluation commands to execute.
     time_limit (float|None): time limit in seconds (applied to each command);
         if None, no time limit is enforced.
-    time_limit_python (float|None): time limit in seconds for Python; if None,
-        time_limit is used.
     memory_limit (int|None): memory limit in MiB (applied to each command); if
         None, no memory limit is enforced.
     allow_dirs ([str]|None): if not None, a list of external
@@ -135,7 +133,7 @@ def evaluation_step(sandbox, commands,
     """
     for command in commands:
         success = evaluation_step_before_run(
-            sandbox, command, time_limit, time_limit_python, memory_limit,
+            sandbox, command, time_limit, memory_limit,
             allow_dirs, writable_files, stdin_redirect, stdout_redirect,
             multiprocess, wait=True)
         if not success:
@@ -150,7 +148,7 @@ def evaluation_step(sandbox, commands,
 
 
 def evaluation_step_before_run(sandbox, command,
-                               time_limit=None, time_limit_python=None, memory_limit=None,
+                               time_limit=None, memory_limit=None,
                                allow_dirs=None, writable_files=None,
                                stdin_redirect=None, stdout_redirect=None,
                                multiprocess=False, wait=False):
@@ -168,8 +166,6 @@ def evaluation_step_before_run(sandbox, command,
     # Ensure parameters are appropriate.
     if time_limit is not None and time_limit <= 0:
         raise ValueError("Time limit must be positive, is %s" % time_limit)
-    if time_limit_python is not None and time_limit_python <= 0:
-        raise ValueError("Python time limit must be positive, is %s" % time_limit_python)
     if memory_limit is not None and memory_limit <= 0:
         raise ValueError(
             "Memory limit must be positive, is %s" % memory_limit)
@@ -184,7 +180,7 @@ def evaluation_step_before_run(sandbox, command,
 
     # Set sandbox parameters suitable for evaluation.
     if time_limit is not None:
-        sandbox.timeout = time_limit_python if time_limit_python is not None and len(command) > 1 and  ("python" in command[0] or "php" in command[0]) else time_limit
+        sandbox.timeout = time_limit
         logger.info("Timeout: " + repr(sandbox.timeout))
         sandbox.wallclock_timeout = 2 * sandbox.timeout + 1
     else:
