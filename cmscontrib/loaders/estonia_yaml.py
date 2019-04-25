@@ -512,6 +512,18 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         else:
             evaluation_param = "diff"
 
+        # If there is check/batchmanager, then this is an interactive
+        # task to be evaluated in a single sandbox
+        paths = [os.path.join(self.path, "check", "batchmanager")]
+        for path in paths:
+            if os.path.exists(path):
+                digest = self.file_cacher.put_file_from_path(
+                    path,
+                    "Manager for task %s" % task.name)
+                args["managers"] += [
+                    Manager("batchmanager", digest)]
+                break
+
         # Detect subtasks by checking GEN
         gen_filename = os.path.join(self.path, 'gen', 'GEN')
         try:

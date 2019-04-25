@@ -78,6 +78,9 @@ class Batch(TaskType):
     """
     # Codename of the checker, if it is used.
     CHECKER_CODENAME = "checker"
+    # Codename of the manager, when an interactive is to be
+    # evaluated in a single sandbox.
+    MANAGER_CODENAME = "batchmanager"
     # Basename of the grader, used in the manager filename and as the main
     # class in languages that require us to specify it.
     GRADER_BASENAME = "grader"
@@ -275,6 +278,15 @@ class Batch(TaskType):
             sandbox.create_file_from_storage(filename, digest, executable=True)
         for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
+
+        # Special handling: if theres a batchmanager, then this is really an
+        # interactive task to be evaluated in a single sandbox
+        if check_manager_present(job, MANAGER_CODENAME):
+            sandbox.create_file_from_storage(MANAGER_CODENAME,
+                job.managers[MANAGER_CODENAME].digest, executable=True)
+            # if there is a usermanager, the 
+            commands[-1] = "./%s %s %s %s" % (MANAGER_CODENAME,
+                self.input_filename, self.output_filename, commands[-1])
 
         # Actually performs the execution
         box_success, evaluation_success, stats = evaluation_step(
