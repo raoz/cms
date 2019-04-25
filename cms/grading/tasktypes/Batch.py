@@ -281,7 +281,9 @@ class Batch(TaskType):
 
         # Special handling: if theres a batchmanager, then this is really an
         # interactive task to be evaluated in a single sandbox
-        if check_manager_present(job, Batch.MANAGER_CODENAME):
+        # Do NOT use check_manager_present() here, as it will raise an error
+        # for normal tasks with no batchmanager.
+        if Batch.MANAGER_CODENAME in job.managers:
             sandbox.create_file_from_storage(Batch.MANAGER_CODENAME,
                 job.managers[Batch.MANAGER_CODENAME].digest, executable=True)
             # if there is a usermanager, the 
