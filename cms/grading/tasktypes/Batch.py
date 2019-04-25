@@ -279,16 +279,16 @@ class Batch(TaskType):
         for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
 
-        # Special handling: if theres a batchmanager, then this is really an
-        # interactive task to be evaluated in a single sandbox
+        # Special handling: if there's a batchmanager, then this is really an
+        # interactive task to be evaluated in a single sandbox.
         # Do NOT use check_manager_present() here, as it will raise an error
         # for normal tasks with no batchmanager.
         if Batch.MANAGER_CODENAME in job.managers:
             sandbox.create_file_from_storage(Batch.MANAGER_CODENAME,
                 job.managers[Batch.MANAGER_CODENAME].digest, executable=True)
-            # if there is a usermanager, the 
-            commands[-1] = "./%s %s %s %s" % (Batch.MANAGER_CODENAME,
-                self.input_filename, self.output_filename, commands[-1])
+            # If there is a batchmanagermanager, run the last command with it.
+            commands[-1][:0] = ["./%s" % Batch.MANAGER_CODENAME,
+                self.input_filename, self.output_filename]
 
         # Actually performs the execution
         box_success, evaluation_success, stats = evaluation_step(
