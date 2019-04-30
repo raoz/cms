@@ -249,6 +249,11 @@ class Batch(TaskType):
             if self._uses_grader() else executable_filename
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
+        # HACK for NECKLACE: one-time hack to support a task with very low memory limit
+        if job.memory_limit == 3 and language == "Java / JDK":
+            jvm_args = ["-Deval=true", "-Xmx4224k", "-Xss256k", "-XX:MaxMetaspaceSize=8704k"]
+            commands = language.get_evaluation_commands(
+                executable_filename, main=main, jvm_args=jvm_args)
         executables_to_get = {
             executable_filename: job.executables[executable_filename].digest
         }
@@ -291,11 +296,22 @@ class Batch(TaskType):
                 self.input_filename, self.output_filename]
 
         # Actually performs the execution
+        # HACK for NECKLACE: one-time hack to support a task with very low memory limit
+        if job.memory_limit == 3 and language == "Java / JDK":
+            memory_limit = 20
+        elif job.memory_limit == 3 and language == "Python 3 / CPython":
+            memory_limit = 8
+        elif job.memory_limit == 3 and language == "C++11 / g++":
+            memory_limit = 4
+        elif job.memory_limit == 3 and language == "C11 / gcc":
+            memory_limit = 4
+        else:
+            memory_limit = job.memory_limit
         box_success, evaluation_success, stats = evaluation_step(
             sandbox,
             commands,
             job.effective_time_limit(),
-            job.memory_limit,
+            memory_limit,
             writable_files=files_allowing_write,
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect,
