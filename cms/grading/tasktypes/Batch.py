@@ -250,7 +250,7 @@ class Batch(TaskType):
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
         # HACK for NECKLACE: one-time hack to support a task with very low memory limit
-        if job.memory_limit == 3 and language.name() == "Java / JDK":
+        if job.memory_limit == 3 and job.language == "Java / JDK":
             jvm_args = ["-Deval=true", "-Xmx4224k", "-Xss256k", "-XX:MaxMetaspaceSize=8704k"]
             commands = language.get_evaluation_commands(
                 executable_filename, main=main, jvm_args=jvm_args)
@@ -297,13 +297,13 @@ class Batch(TaskType):
 
         # Actually performs the execution
         # HACK for NECKLACE: one-time hack to support a task with very low memory limit
-        if job.memory_limit == 3 and language.name() == "Java / JDK":
+        if job.memory_limit == 3 and job.language == "Java / JDK":
             memory_limit = 20
-        elif job.memory_limit == 3 and language.name() == "Python 3 / CPython":
+        elif job.memory_limit == 3 and job.language == "Python 3 / CPython":
             memory_limit = 8
-        elif job.memory_limit == 3 and language.name() == "C++11 / g++":
+        elif job.memory_limit == 3 and job.language == "C++11 / g++":
             memory_limit = 4
-        elif job.memory_limit == 3 and language.name() == "C11 / gcc":
+        elif job.memory_limit == 3 and job.language == "C11 / gcc":
             memory_limit = 4
         else:
             memory_limit = job.memory_limit
