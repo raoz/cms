@@ -172,3 +172,18 @@ class CompiledLanguage(Language):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
         return [[os.path.join(".", executable_filename)] + args]
+
+
+class InterpretedLanguage(Language):
+    """A language which uses an interpreter."""
+
+    def get_compilation_commands(self,
+                                 source_filenames, executable_filename,
+                                 for_evaluation=True):
+        return [["/bin/cp", source_filenames[0], executable_filename]]
+
+    def get_evaluation_commands(
+            self, executable_filename, main=None, args=None):
+        args = args if args is not None else []
+        return [[self.interpreter, executable_filename] + args]
+

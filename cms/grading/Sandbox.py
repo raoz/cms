@@ -972,6 +972,9 @@ class IsolateSandbox(SandboxBase):
         if os.path.isdir("/etc/alternatives"):
             self.add_mapped_directories(["/etc/alternatives"])
 
+        # Needed for running PyPy
+        self.add_mapped_directories(["/opt"])
+
         # Tell isolate to get the sandbox ready. We do our best to
         # cleanup after ourselves, but we might have missed something
         # if the worker was interrupted in the middle of an execution.
