@@ -26,51 +26,23 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
-import os
-
-from six import PY3
-if PY3:
-    from shlex import quote as shell_quote
-else:
-    from pipes import quote as shell_quote
-
-from cms.grading import CompiledLanguage
+from cms.grading.languages.python import PythonBase
 
 
 __all__ = ["Python2CPython"]
 
 
-class Python2CPython(CompiledLanguage):
+class Python2CPython(PythonBase):
     """This defines the Python programming language, version 2 (more
     precisely, the subversion of Python 2 available on the system,
     usually 2.7) using the default interpeter in the system.
-
     """
+
+    @property
+    def interpreter(self):
+        return "/usr/bin/python2"
 
     @property
     def name(self):
         """See Language.name."""
         return "Python 2 / CPython"
-
-    @property
-    def source_extensions(self):
-        """See Language.source_extensions."""
-        return [".py"]
-
-    def get_compilation_commands(self,
-                                 source_filenames, executable_filename,
-                                 for_evaluation=True):
-        """See Language.get_compilation_commands."""
-        py_command = ["/usr/bin/python2", "-m", "py_compile"] + source_filenames
-        zip_command = ["/bin/sh", "-c",
-                       " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.pyc", ">",
-                                 shell_quote(executable_filename)])]
-        return [py_command, zip_command]
-
-    def get_evaluation_commands(
-            self, executable_filename, main=None, args=None):
-        """See Language.get_evaluation_commands."""
-        args = args if args is not None else []
-        unzip_command = ["/usr/bin/unzip", executable_filename]
-        py_command = ["/usr/bin/python2", main + ".pyc"] + args
-        return [unzip_command, py_command]

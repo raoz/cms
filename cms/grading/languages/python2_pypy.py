@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Python3 via PyPy"""
+"""Python2 via PyPy"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -26,13 +26,13 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
-from cms.grading.language import InterpretedLanguage
+from cms.grading.languages.python import PythonBase
 
 
 __all__ = ["Python2Pypy"]
 
 
-class Python2Pypy(InterpretedLanguage):
+class Python2Pypy(PythonBase):
     """This defines the Python 2 programming language, interpreted with the
     PyPy interpreter installed at /opt
     """
@@ -44,8 +44,3 @@ class Python2Pypy(InterpretedLanguage):
     @property
     def name(self):
         return "Python 2 / PyPy"
-
-    @property
-    def source_extensions(self):
-        return [".py"]
-

@@ -26,56 +26,23 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
-import os
-
-from six import PY3
-if PY3:
-    from shlex import quote as shell_quote
-else:
-    from pipes import quote as shell_quote
-
-from cms.grading import CompiledLanguage
+from cms.grading.languages.python import PythonBase
 
 
 __all__ = ["Python3CPython"]
 
 
-class Python3CPython(CompiledLanguage):
+class Python3CPython(PythonBase):
     """This defines the Python programming language, version 3 (more
     precisely, the subversion of Python 3 available on the system)
     using the default interpeter in the system.
-
     """
+
+    @property
+    def interpreter(self):
+        return "/usr/bin/python3"
 
     @property
     def name(self):
         """See Language.name."""
         return "Python 3 / CPython"
-
-    @property
-    def source_extensions(self):
-        """See Language.source_extensions."""
-        return [".py"]
-
-    def get_compilation_commands(self,
-                                 source_filenames, executable_filename,
-                                 for_evaluation=True):
-        """See Language.get_compilation_commands."""
-        commands = []
-        commands += [["/usr/bin/python3", "-m", "py_compile"] + source_filenames]
-        for s in source_filenames:
-            f = os.path.splitext(os.path.basename(s))[0]
-            commands += [["/bin/sh", "-c",
-                          " ".join(["/bin/mv", "__pycache__/" + f + ".*.pyc", f + ".pyc"])]]
-        commands += [["/bin/sh", "-c",
-                     " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.pyc", ">",
-                               shell_quote(executable_filename)])]]
-        return commands
-
-    def get_evaluation_commands(
-            self, executable_filename, main=None, args=None):
-        """See Language.get_evaluation_commands."""
-        args = args if args is not None else []
-        unzip_command = ["/usr/bin/unzip", executable_filename]
-        py_command = ["/usr/bin/python3", main + ".pyc"] + args
-        return [unzip_command, py_command]

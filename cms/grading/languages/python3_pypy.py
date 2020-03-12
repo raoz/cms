@@ -26,16 +26,17 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
-from cms.grading.language import InterpretedLanguage
+from cms.grading.languages.python import PythonBase
 
 
 __all__ = ["Python3Pypy"]
 
 
-class Python3Pypy(InterpretedLanguage):
+class Python3Pypy(PythonBase):
     """This defines the Python 3 programming language, interpreted with the
     PyPy interpreter installed at /opt
     """
+
     @property
     def interpreter(self):
         return "/opt/pypy3.6-v7.2.0-linux64/bin/pypy3"
@@ -43,8 +44,3 @@ class Python3Pypy(InterpretedLanguage):
     @property
     def name(self):
         return "Python 3 / PyPy"
-
-    @property
-    def source_extensions(self):
-        return [".py"]
-
