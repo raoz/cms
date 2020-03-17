@@ -458,13 +458,13 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         infile_param = conf.get("infile", "input.txt")
         outfile_param = conf.get("outfile", "output.txt")
 
-        # If there is sol/grader.%l for some language %l, then,
+        # If there is solution/grader.%l for some language %l, then,
         # presuming that the task type is Batch, we retrieve graders
-        # in the form sol/grader.%l
+        # in the form solution/grader.%l
         graders = False
         for lang in LANGUAGES:
             if os.path.exists(os.path.join(
-                    self.path, "sol", "grader%s" % lang.source_extension)):
+                    self.path, "solution", "grader%s" % lang.source_extension)):
                 graders = True
                 break
         if graders:
@@ -472,7 +472,7 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             for lang in LANGUAGES:
                 extension = lang.source_extension
                 grader_filename = os.path.join(
-                    self.path, "sol", "grader%s" % extension)
+                    self.path, "solution", "grader%s" % extension)
                 if os.path.exists(grader_filename):
                     digest = self.file_cacher.put_file_from_path(
                         grader_filename,
@@ -483,11 +483,11 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                 else:
                     logger.warning("Grader for language %s not found ", lang)
             # Read managers with other known file extensions
-            for other_filename in os.listdir(os.path.join(self.path, "sol")):
+            for other_filename in os.listdir(os.path.join(self.path, "solution")):
                 if any(other_filename.endswith(header)
                        for header in HEADER_EXTS):
                     digest = self.file_cacher.put_file_from_path(
-                        os.path.join(self.path, "sol", other_filename),
+                        os.path.join(self.path, "solution", other_filename),
                         "Manager %s for task %s" % (other_filename, task.name))
                     args["managers"] += [
                         Manager(other_filename, digest)]
@@ -640,7 +640,7 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         Manager("manager", digest)]
                     for lang in LANGUAGES:
                         stub_name = os.path.join(
-                            self.path, "sol", "stub%s" % lang.source_extension)
+                            self.path, "solution", "stub%s" % lang.source_extension)
                         if os.path.exists(stub_name):
                             digest = self.file_cacher.put_file_from_path(
                                 stub_name,
@@ -653,11 +653,11 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                             logger.warning("Stub for language %s not "
                                            "found.", lang.name)
                     for other_filename in os.listdir(os.path.join(self.path,
-                                                                  "sol")):
+                                                                  "solution")):
                         if any(other_filename.endswith(header)
                                for header in HEADER_EXTS):
                             digest = self.file_cacher.put_file_from_path(
-                                os.path.join(self.path, "sol", other_filename),
+                                os.path.join(self.path, "solution", other_filename),
                                 "Stub %s for task %s" % (other_filename,
                                                          task.name))
                             args["managers"] += [
@@ -808,15 +808,15 @@ class EstYamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         files.append(os.path.join(self.path, "check", "manager"))
         files.append(os.path.join(self.path, "cor", "manager"))
         if not conf.get('output_only', False) and \
-                os.path.isdir(os.path.join(self.path, "sol")):
+                os.path.isdir(os.path.join(self.path, "solution")):
             for lang in LANGUAGES:
                 files.append(os.path.join(
-                    self.path, "sol", "grader%s" % lang.source_extension))
-            for other_filename in os.listdir(os.path.join(self.path, "sol")):
+                    self.path, "solution", "grader%s" % lang.source_extension))
+            for other_filename in os.listdir(os.path.join(self.path, "solution")):
                 if any(other_filename.endswith(header)
                        for header in HEADER_EXTS):
                     files.append(
-                        os.path.join(self.path, "sol", other_filename))
+                        os.path.join(self.path, "solution", other_filename))
 
         # Yaml
         files.append(os.path.join(self.path, "task.yaml"))
