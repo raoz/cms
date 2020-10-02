@@ -78,7 +78,7 @@ class Job(object):
     def __init__(self, operation=None,
                  task_type=None, task_type_parameters=None,
                  language=None, multithreaded_sandbox=False,
-                 archive_sandbox=False, shard=None, keep_sandbox=Fale,
+                 archive_sandbox=False, shard=None, keep_sandbox=False,
                  sandboxes=None, sandbox_digests=None,
                  info=None, success=None, text=None,
                  files=None, managers=None, executables=None):

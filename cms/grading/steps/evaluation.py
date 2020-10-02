@@ -136,13 +136,8 @@ def evaluation_step(sandbox, commands,
     """
     for command in commands:
         success = evaluation_step_before_run(
-<<<<<<< HEAD
             sandbox, command, time_limit, time_limit_python, memory_limit,
-            allow_dirs, writable_files, stdin_redirect, stdout_redirect,
-=======
-            sandbox, command, time_limit, memory_limit,
             dirs_map, writable_files, stdin_redirect, stdout_redirect,
->>>>>>> c927117474cfd43442a1b36303f9c1d94402ba9a
             multiprocess, wait=True)
         if not success:
             logger.debug("Job failed in evaluation_step_before_run.")
@@ -156,13 +151,8 @@ def evaluation_step(sandbox, commands,
 
 
 def evaluation_step_before_run(sandbox, command,
-<<<<<<< HEAD
                                time_limit=None, time_limit_python=None, memory_limit=None,
-                               allow_dirs=None, writable_files=None,
-=======
-                               time_limit=None, memory_limit=None,
                                dirs_map=None, writable_files=None,
->>>>>>> c927117474cfd43442a1b36303f9c1d94402ba9a
                                stdin_redirect=None, stdout_redirect=None,
                                multiprocess=False, wait=False):
     """First part of an evaluation step, up to the execution, included.
