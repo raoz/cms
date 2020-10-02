@@ -550,12 +550,6 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
         # Put archive to FS
         return self.get_file_to_storage(sandbox_archive, "Sandbox %s" % self.path)
 
-    @abstractmethod
-    def delete(self):
-        """Delete the directory where the sandbox operated.
-
-        """
-        pass
 
 
 class StupidSandbox(SandboxBase):
@@ -965,7 +959,7 @@ class IsolateSandbox(SandboxBase):
 
 
         # Needed for running PyPy
-        self.add_mapped_directories(["/opt"])
+        self.add_mapped_directory("/opt")
 
         # Tell isolate to get the sandbox ready. We do our best to cleanup
         # after ourselves, but we might have missed something if a previous
