@@ -193,6 +193,7 @@ setup(
             "GroupThreshold=cms.grading.scoretypes.GroupThreshold:GroupThreshold",
             "GroupSum=cms.grading.scoretypes.GroupSum:GroupSum",
             "GroupSumCond=cms.grading.scoretypes.GroupSumCond:GroupSumCond",
+            "GroupSumCheck=cms.grading.scoretypes.GroupSumCheck:GroupSumCheck",
         ],
         "cms.grading.languages": [
             "C++11 / g++=cms.grading.languages.cpp11_gpp:Cpp11Gpp",
@@ -205,6 +206,8 @@ setup(
             "PHP=cms.grading.languages.php:Php",
             "Python 2 / CPython=cms.grading.languages.python2_cpython:Python2CPython",
             "Python 3 / CPython=cms.grading.languages.python3_cpython:Python3CPython",
+            "Python 2 / PyPy=cms.grading.languages.python2_pypy:Python2Pypy",
+            "Python 3 / PyPy=cms.grading.languages.python3_pypy:Python3Pypy",
             "Rust=cms.grading.languages.rust:Rust",
         ],
     },

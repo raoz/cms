@@ -963,6 +963,10 @@ class IsolateSandbox(SandboxBase):
         # symlink to one out of many alternatives.
         self.maybe_add_mapped_directory("/etc/alternatives")
 
+
+        # Needed for running PyPy
+        self.add_mapped_directories(["/opt"])
+
         # Tell isolate to get the sandbox ready. We do our best to cleanup
         # after ourselves, but we might have missed something if a previous
         # worker was interrupted in the middle of an execution, so we issue an
@@ -1046,7 +1050,9 @@ class IsolateSandbox(SandboxBase):
         # Close everything, then open only the specified.
         self.allow_writing_none()
         for path in outer_paths:
-            os.chmod(path, 0o722)
+            # HACK to prevent messing with FIFO permissions in Communication tasks
+            if "/m_to_u" not in path and "_to_m" not in path:
+                os.chmod(path, 0o722)
 
     def get_root_path(self):
         """Return the toplevel path of the sandbox.

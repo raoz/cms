@@ -26,22 +26,24 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
+from cms.grading.languages.python import PythonBase
 import os
-
-from cms.grading import CompiledLanguage
 
 
 __all__ = ["Python3CPython"]
 
 
-class Python3CPython(CompiledLanguage):
+class Python3CPython(PythonBase):
     """This defines the Python programming language, version 3 (more
     precisely, the subversion of Python 3 available on the system)
     using the default interpeter in the system.
-
     """
 
     MAIN_FILENAME = "__main__.pyc"
+
+    @property
+    def interpreter(self):
+        return "/usr/bin/python3"
 
     @property
     def name(self):

@@ -78,6 +78,9 @@ class Batch(TaskType):
     """
     # Codename of the checker, if it is used.
     CHECKER_CODENAME = "checker"
+    # Codename of the manager, when an interactive task is to be
+    # evaluated in a single sandbox.
+    MANAGER_CODENAME = "batchmanager"
     # Basename of the grader, used in the manager filename and as the main
     # class in languages that require us to specify it.
     GRADER_BASENAME = "grader"
@@ -266,6 +269,11 @@ class Batch(TaskType):
             if self._uses_grader() else executable_filename
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
+        # HACK for NECKLACE: one-time hack to support a task with very low memory limit
+        if job.memory_limit == 3 and job.language == "Java / JDK":
+            jvm_args = ["-Deval=true", "-Xmx4224k", "-Xss256k", "-XX:MaxMetaspaceSize=8704k"]
+            commands = language.get_evaluation_commands(
+                executable_filename, main=main, jvm_args=jvm_args)
         executables_to_get = {
             executable_filename: job.executables[executable_filename].digest
         }
@@ -296,13 +304,34 @@ class Batch(TaskType):
         for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
 
+        # Special handling: if there's a batchmanager, then this is really an
+        # interactive task to be evaluated in a single sandbox.
+        # Do NOT use check_manager_present() here, as it will raise an error
+        # for normal tasks with no batchmanager.
+        if Batch.MANAGER_CODENAME in job.managers:
+            sandbox.create_file_from_storage(Batch.MANAGER_CODENAME,
+                job.managers[Batch.MANAGER_CODENAME].digest, executable=True)
+            # If there is a batchmanagermanager, run the last command with it.
+            commands[-1][:0] = ["./%s" % Batch.MANAGER_CODENAME,
+                self.input_filename, self.output_filename]
+
         # Actually performs the execution
+        # HACK for NECKLACE: one-time hack to support a task with very low memory limit
+        if job.memory_limit == 3 and job.language == "Java / JDK":
+            memory_limit = 20
+        elif job.memory_limit == 3 and job.language == "Python 3 / CPython":
+            memory_limit = 8
+        elif job.memory_limit == 3 and job.language == "C++11 / g++":
+            memory_limit = 4
+        elif job.memory_limit == 3 and job.language == "C11 / gcc":
+            memory_limit = 4
+        else:
+            memory_limit = job.memory_limit
         box_success, evaluation_success, stats = evaluation_step(
             sandbox,
             commands,
-            job.time_limit,
-            job.time_limit_python,
-            job.memory_limit,
+            job.effective_time_limit(),
+            memory_limit,
             writable_files=files_allowing_write,
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect,

@@ -73,27 +73,27 @@ class JavaJDK(Language):
         # a class file for each inner class.
         if JavaJDK.USE_JAR:
             jar_command = ["/bin/sh", "-c",
-                           " ".join(["jar", "cf",
+                           " ".join(["/usr/bin/jar", "cf",
                                      shell_quote(executable_filename),
                                      "*.class"])]
             return [compile_command, jar_command]
         else:
             zip_command = ["/bin/sh", "-c",
-                           " ".join(["zip", "-r", "-", "*.class", ">",
+                           " ".join(["/usr/bin/zip", "-q", "-r", "-", "*.class", ">",
                                      shell_quote(executable_filename)])]
             return [compile_command, zip_command]
 
     def get_evaluation_commands(
-            self, executable_filename, main=None, args=None):
+            self, executable_filename, main=None, args=None, jvm_args=None):
         """See Language.get_evaluation_commands."""
         args = args if args is not None else []
+        jvm_args = jvm_args if jvm_args is not None else ["-Deval=true", "-Xmx512M", "-Xss64M"]
         if JavaJDK.USE_JAR:
             # executable_filename is a jar file, main is the name of
             # the main java class
-            return [["/usr/bin/java", "-Deval=true", "-Xmx512M", "-Xss64M",
-                     "-cp", executable_filename, main] + args]
+            return [["/usr/bin/java"] + jvm_args +
+                    ["-cp", executable_filename, main] + args]
         else:
             unzip_command = ["/usr/bin/unzip", executable_filename]
-            command = ["/usr/bin/java", "-Deval=true", "-Xmx512M", "-Xss64M",
-                       main] + args
+            command = ["/usr/bin/java"] + jvm_args + [main] + args
             return [unzip_command, command]

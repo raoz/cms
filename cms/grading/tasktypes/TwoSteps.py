@@ -256,8 +256,7 @@ class TwoSteps(TaskType):
         first = evaluation_step_before_run(
             first_sandbox,
             first_command,
-            job.time_limit,
-            job.time_limit_python,
+            job.effective_time_limit(),
             job.memory_limit,
             dirs_map={fifo_dir: ("/fifo", "rw")},
             stdin_redirect=TwoSteps.INPUT_FILENAME,
@@ -280,8 +279,7 @@ class TwoSteps(TaskType):
         second = evaluation_step_before_run(
             second_sandbox,
             second_command,
-            job.time_limit,
-            job.time_limit_python,
+            job.effective_time_limit(),
             job.memory_limit,
             dirs_map={fifo_dir: ("/fifo", "rw")},
             stdout_redirect=TwoSteps.OUTPUT_FILENAME,

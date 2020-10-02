@@ -472,6 +472,8 @@ class EvaluationJob(Job):
         input (string|None): digest of the input file.
         output (string|None): digest of the output file.
         time_limit (float|None): user time limit in seconds.
+        time_limit_python (float|None): user time limit in seconds
+            for Python (and PHP) solutions; if None, time_limit is used.
         memory_limit (int|None): memory limit in bytes.
         outcome (string|None): the outcome of the evaluation, from
             which to compute the score.
@@ -501,6 +503,14 @@ class EvaluationJob(Job):
         self.plus = plus
         self.only_execution = only_execution
         self.get_output = get_output
+
+    def effective_time_limit(self):
+        res = self.time_limit
+        if self.time_limit_python is not None and self.language is not None:
+            lang = self.language.lower()
+            if lang.startswith('python') or lang.startswith('php'):
+                res = self.time_limit_python
+        return res
 
     def export_to_dict(self):
         res = Job.export_to_dict(self)
