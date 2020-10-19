@@ -21,7 +21,7 @@ chardet>=3.0,<3.1  # https://pypi.python.org/pypi/chardet
 ipaddress>=1.0,<1.1  # https://pypi.python.org/pypi/ipaddress
 future>=0.15,<0.16  # https://pypi.python.org/pypi/future
 babel>=2.4,<2.5  # http://babel.pocoo.org/en/latest/changelog.html
-pyxdg>=0.25,<0.26  # https://freedesktop.org/wiki/Software/pyxdg/
+pyxdg>=0.25,<0.28  # https://freedesktop.org/wiki/Software/pyxdg/
 Jinja2>=2.10,<2.11  # http://jinja.pocoo.org/docs/latest/changelog/
 
 # Only for some importers:
